@@ -1,0 +1,68 @@
+#include <Wire.h>
+#include <LCD_I2C.h>
+LCD_I2C lcd(0x27, 20, 4); // Set the LCD I2C address and size for 20x4
+String message = "";      // To store the incoming message
+int buzzerPin = 2;        // Pin for the buzzer
+
+void setup() {
+  Serial.begin(9600);         // Initialize serial communication for Bluetooth
+  lcd.begin();                // Initialize the LCD for 20x4 display
+  lcd.backlight();            // Turn on the LCD backlight
+  pinMode(buzzerPin, OUTPUT); // Set buzzer pin as output
+  lcd.print("Waiting for");
+  lcd.setCursor(0, 1);
+  lcd.print("message...");
+}
+
+void loop() {
+  // Check if data is received via Bluetooth
+  if (Serial.available() > 0) {
+    char incomingChar = Serial.read(); // Read each character
+
+    // When newline is received, display the message
+    if (incomingChar == '\n') {
+      lcd.clear();
+      message.trim();             // Remove any leading/trailing whitespace
+      playBuzzer();               // Sound buzzer on new message
+      scrollMessage();            // Scroll the received message
+      message = "";               // Clear the message buffer
+    } else {
+      message += incomingChar;    // Append character to the message
+    }
+  }
+}
+
+// Function to play the buzzer sound
+void playBuzzer() {
+  digitalWrite(buzzerPin, HIGH);
+  delay(100);                     // Buzzer on for 100ms
+  digitalWrite(buzzerPin, LOW);
+}
+
+// Function to scroll the message from bottom to top
+void scrollMessage() {
+  int length = message.length();  // Get the message length
+  int scrollDelay = 500;          // Delay between scrolls (in ms)
+
+  // Loop to scroll through the entire message
+  for (int i = 0; i < length; i += 20) {
+    // Display the message section for each line
+    String line1 = message.substring(i, min(i + 20, length));
+    String line2 = message.substring(i + 20, min(i + 40, length));
+    String line3 = message.substring(i + 40, min(i + 60, length));
+    String line4 = message.substring(i + 60, min(i + 80, length));
+
+    // Clear LCD and display each segment
+    lcd.clear();
+    lcd.setCursor(0, 3); // Start from the bottom line
+    lcd.print(line4);
+    lcd.setCursor(0, 2);
+    lcd.print(line3);
+    lcd.setCursor(0, 1);
+    lcd.print(line2);
+    lcd.setCursor(0, 0);
+    lcd.print(line1);
+
+    delay(scrollDelay); // Delay to control scroll speed
+  }
+}
